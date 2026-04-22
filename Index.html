@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Invoice Generator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #fff;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .no-print {
+            display: block;
+        }
+
+        /* Layout */
+        .app-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            gap: 2.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1.5rem;
+            }
+
+            .editor-sidebar {
+                position: static !important;
+                height: auto !important;
+            }
+        }
+
+        /* Sidebar Editor */
+        .editor-sidebar {
+            position: sticky;
+            top: 2rem;
+            height: calc(100vh - 4rem);
+            overflow-y: auto;
+            background: white;
+            padding: 2rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        /* Hide scrollbar for editor */
+        .editor-sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .editor-sidebar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin: 1.5rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: var(--text-main);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: inherit;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Item Rows */
+        .item-editor-row {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+
+        .item-editor-grid {
+            display: grid;
+            grid-template-columns: 1fr 60px 100px;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .item-editor-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .item-editor-grid .form-group:first-child {
+                grid-column: span 2;
+            }
+        }
+
+        .btn-delete {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-add {
+            width: 100%;
+            padding: 0.75rem;
+            background: #e2e8f0;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            color: var(--text-main);
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+        .btn-add:hover {
+            background: #f1f5f9;
+        }
+
+        /* Preview Paper */
+        .preview-paper {
+            background: white;
+            min-height: 29.7cm;
+            /* A4 height */
+            padding: 3.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            position: relative;
+            color: #0f172a;
+        }
+
+        @media (max-width: 768px) {
+            .preview-paper {
+                padding: 1.5rem;
+                min-height: auto;
+            }
+
+            .invoice-header {
+                flex-direction: column;
+                gap: 2rem;
+                margin-bottom: 2rem !important;
+            }
+
+            .invoice-header div:last-child {
+                text-align: left !important;
+            }
+
+            .billing-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1.5rem !important;
+                margin-bottom: 2rem !important;
+            }
+
+            .billing-grid div:last-child {
+                text-align: left !important;
+            }
+
+            .invoice-type-text {
+                font-size: 2.25rem !important;
+            }
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4rem;
+        }
+
+        .brand-logo-preview {
+            width: 60px;
+            height: 60px;
+            background: #f1f5f9;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .invoice-type-text {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--accent);
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .meta-val {
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .meta-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+
+        .billing-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .info-block h4 {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .target-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
+
+        .target-sub {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            white-space: pre-wrap;
+        }
+
+        /* Table */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 3rem;
+        }
+
+        .items-table {
+            width: 100%;
+            min-width: 600px;
+            border-collapse: collapse;
+        }
+
+        .items-table th {
+            text-align: left;
+            padding: 1rem;
+            background: #f8fafc;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .items-table td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9375rem;
+        }
+
+        .summary-wrapper {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .summary-table {
+            width: 300px;
+        }
+
+        @media (max-width: 600px) {
+            .summary-table {
+                width: 100%;
+            }
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 0.9375rem;
+        }
+
+        .total-row {
+            margin-top: 1rem;
+            border-top: 2px solid var(--border);
+            padding-top: 1rem;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent);
+        }
+
+        /* Buttons Header */
+        .top-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 600px) {
+            .top-actions {
+                justify-content: stretch;
+            }
+
+            .btn-action {
+                flex: 1;
+                justify-content: center;
+                font-size: 0.8rem !important;
+                padding: 0.75rem 1rem !important;
+            }
+        }
+
+        .btn-action {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+            transition: transform 0.2s;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-whatsapp {
+            background: #25d366;
+            color: white;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .app-container {
+                display: block;
+                padding: 0;
+            }
+
+            .preview-paper {
+                box-shadow: none;
+                padding: 0;
+                width: 100%;
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="app-container">
+            <!-- Sidebar Editor -->
+            <aside class="editor-sidebar no-print">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+                    <div style="background: var(--accent); color: white; padding: 0.5rem; border-radius: 8px;">
+                        <i data-lucide="receipt"></i>
+                    </div>
+                    <h1 style="font-size: 1.25rem; font-weight: 900;">InvoiceGen</h1>
+                </div>
+
+                <div class="section-title"><i data-lucide="building" size="14"></i> Your Business (Vendor)</div>
+                <div class="form-group">
+                    <label class="form-label">Business Logo</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="file" @change="handleLogoUpload" accept="image/*" class="form-input" style="padding: 0.4rem;">
+                        <button v-if="invoice.vendorLogoImage" @click="removeLogo" class="btn-delete" style="position: static; transform: none; width: auto; height: auto; border-radius: 4px; padding: 0.4rem;">Remove</button>
+                    </div>
+                    <p style="font-size: 0.6rem; color: var(--text-muted); margin-top: 0.25rem;">Upload an image or use initials below.</p>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Business Name</label>
+                        <input type="text" v-model="invoice.vendorName" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Logo Initials</label>
+                        <input type="text" v-model="invoice.vendorLogo" class="form-input" maxlength="3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Business Address</label>
+                    <textarea v-model="invoice.vendorAddress" class="form-input" rows="2"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="text" v-model="invoice.vendorEmail" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="text" v-model="invoice.vendorPhone" class="form-input">
+                    </div>
+                </div>
+
+                <div class="section-title"><i data-lucide="file-text" size="14"></i> Invoice Meta</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Invoice #</label>
+                        <input type="text" v-model="invoice.number" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" v-model="invoice.date" class="form-input">
+                    </div>
+                </div>
+
+                <div class="section-title"><i data-lucide="user" size="14"></i> Client Details</div>
+                <div class="form-group">
+                    <label class="form-label">Client Name</label>
+                    <input type="text" v-model="invoice.clientName" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <textarea v-model="invoice.clientAddress" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="text" v-model="invoice.clientEmail" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="text" v-model="invoice.clientPhone" class="form-input">
+                    </div>
+                </div>
+
+                <div class="section-title"><i data-lucide="shopping-bag" size="14"></i> Line Items</div>
+                <div v-for="(item, index) in invoice.items" :key="index" class="item-editor-row">
+                    <button @click="removeItem(index)" class="btn-delete">×</button>
+                    <div class="form-group">
+                        <input type="text" v-model="item.desc" class="form-input" placeholder="Service description">
+                    </div>
+                    <div class="item-editor-grid">
+                        <div class="form-group">
+                            <input type="number" v-model="item.qty" class="form-input" placeholder="Qty">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <input type="number" v-model="item.price" class="form-input" placeholder="Price">
+                        </div>
+                    </div>
+                </div>
+                <button @click="addItem" class="btn-add">+ Add New Item</button>
+
+                <div class="section-title"><i data-lucide="percent" size="14"></i> Tax Settings</div>
+                <div class="form-row" style="align-items: center; gap: 1rem; background: #f1f5f9; padding: 0.75rem; border-radius: 8px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Tax Rate (%)</label>
+                        <input type="number" v-model="invoice.taxRate" class="form-input" :disabled="!invoice.taxEnabled">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;" @click="invoice.taxEnabled = !invoice.taxEnabled">
+                        <div :style="{
+                            width: '40px',
+                            height: '20px',
+                            background: invoice.taxEnabled ? 'var(--accent)' : '#cbd5e1',
+                            borderRadius: '20px',
+                            position: 'relative',
+                            transition: '0.3s'
+                        }">
+                            <div :style="{
+                                width: '16px',
+                                height: '16px',
+                                background: 'white',
+                                borderRadius: '50%',
+                                position: 'absolute',
+                                top: '2px',
+                                left: invoice.taxEnabled ? '22px' : '2px',
+                                transition: '0.3s'
+                            }"></div>
+                        </div>
+                        <span style="font-size: 0.75rem; font-weight: 700;">{{ invoice.taxEnabled ? 'Tax ON' : 'Tax OFF' }}</span>
+                    </div>
+                </div>
+
+                <div class="section-title"><i data-lucide="info" size="14"></i> Footer Note</div>
+                <div class="form-group">
+                    <textarea v-model="invoice.footerNote" class="form-input" rows="2"></textarea>
+                </div>
+            </aside>
+
+            <!-- Main Preview Area -->
+            <main>
+                <div class="top-actions no-print">
+                    <button @click="shareWhatsApp" class="btn-action btn-whatsapp">
+                        <i data-lucide="message-circle"></i> WhatsApp
+                    </button>
+                    <button @click="printInvoice" class="btn-action btn-primary">
+                        <i data-lucide="printer"></i> Print / PDF
+                    </button>
+                </div>
+
+                <div class="preview-paper">
+                    <div class="invoice-header">
+                        <div>
+                            <div class="brand-logo-preview">
+                                <img v-if="invoice.vendorLogoImage" :src="invoice.vendorLogoImage" style="width: 100%; height: 100%; object-fit: contain;">
+                                <span v-else>{{ invoice.vendorLogo || '??' }}</span>
+                            </div>
+                            <h2 style="font-weight: 800; font-size: 1.1rem;">{{ invoice.vendorName || 'Your Business' }}</h2>
+                            <p style="font-size: 0.8rem; color: #64748b;">{{ invoice.vendorPhone }}</p>
+                            <p style="font-size: 0.8rem; color: #64748b;">{{ invoice.vendorEmail }}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h1 class="invoice-type-text">INVOICE</h1>
+                            <div style="margin-top: 1rem;">
+                                <p><span class="meta-label">NO:</span> <span class="meta-val">{{ invoice.number
+                                        }}</span></p>
+                                <p><span class="meta-label">DATE:</span> <span class="meta-val">{{ invoice.date
+                                        }}</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="billing-grid">
+                        <div class="info-block">
+                            <h4>BILL TO</h4>
+                            <p class="target-name">{{ invoice.clientName || 'Client Name' }}</p>
+                            <p class="target-sub">{{ invoice.clientAddress || 'Client Address' }}</p>
+                            <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #64748b;">
+                                <p v-if="invoice.clientEmail">{{ invoice.clientEmail }}</p>
+                                <p v-if="invoice.clientPhone">{{ invoice.clientPhone }}</p>
+                            </div>
+                        </div>
+                        <div class="info-block" style="text-align: right;">
+                            <h4>PAYMENT TO</h4>
+                            <p class="target-name">{{ invoice.vendorName || 'Your Business' }}</p>
+                            <p class="target-sub" style="font-size: 0.8rem;">{{ invoice.vendorAddress }}</p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th style="text-align: center; width: 60px;">Qty</th>
+                                    <th style="text-align: right; width: 150px;">Price</th>
+                                    <th style="text-align: right; width: 150px;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in invoice.items" :key="index">
+                                    <td>{{ item.desc || 'New Service' }}</td>
+                                    <td style="text-align: center;">{{ item.qty }}</td>
+                                    <td style="text-align: right;">{{ formatCurrency(item.price) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ formatCurrency(item.qty *
+                                        item.price) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="summary-wrapper">
+                        <div class="summary-table">
+                            <div class="summary-row">
+                                <span>Subtotal</span>
+                                <span>{{ formatCurrency(subtotal) }}</span>
+                            </div>
+                            <div v-if="invoice.taxEnabled" class="summary-row">
+                                <span>Tax ({{ invoice.taxRate }}%)</span>
+                                <span>{{ formatCurrency(tax) }}</span>
+                            </div>
+                            <div class="summary-row total-row">
+                                <span>Total Due</span>
+                                <span>{{ formatCurrency(total) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 4rem; border-top: 1px solid #f1f5f9; padding-top: 2rem;">
+                        <p
+                            style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 0.5rem;">
+                            Note</p>
+                        <p style="font-size: 0.875rem; color: #64748b;">{{ invoice.footerNote }}</p>
+                    </div>
+
+                    <div style="margin-top: 5rem; text-align: center;">
+                        <p
+                            style="font-weight: 800; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase;">
+                            Thank you for your business!</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                const defaultInvoice = {
+                    number: '',
+                    date: new Date().toISOString().split('T')[0],
+                    vendorName: '',
+                    vendorAddress: '',
+                    vendorEmail: '',
+                    vendorPhone: '',
+                    vendorLogo: '',
+                    vendorLogoImage: '',
+                    clientName: '',
+                    clientAddress: '',
+                    clientEmail: '',
+                    clientPhone: '',
+                    footerNote: '',
+                    taxEnabled: false,
+                    taxRate: 0,
+                    items: []
+                };
+
+                // Load vendor data from localStorage
+                const savedVendor = JSON.parse(localStorage.getItem('invoice_vendor_data') || '{}');
+                const invoice = ref({ ...defaultInvoice, ...savedVendor });
+
+                // Persistence: Watch and save business details
+                watch(() => ({
+                    vendorName: invoice.value.vendorName,
+                    vendorAddress: invoice.value.vendorAddress,
+                    vendorEmail: invoice.value.vendorEmail,
+                    vendorPhone: invoice.value.vendorPhone,
+                    vendorLogo: invoice.value.vendorLogo,
+                    vendorLogoImage: invoice.value.vendorLogoImage,
+                    taxEnabled: invoice.value.taxEnabled,
+                    taxRate: invoice.value.taxRate,
+                    footerNote: invoice.value.footerNote
+                }), (newVal) => {
+                    localStorage.setItem('invoice_vendor_data', JSON.stringify(newVal));
+                }, { deep: true });
+
+                const subtotal = computed(() => {
+                    return invoice.value.items.reduce((acc, item) => acc + (item.qty * item.price), 0);
+                });
+
+                const tax = computed(() => {
+                    return invoice.value.taxEnabled ? subtotal.value * (invoice.value.taxRate / 100) : 0;
+                });
+                
+                const total = computed(() => subtotal.value + tax.value);
+
+                const addItem = () => {
+                    invoice.value.items.push({ desc: '', qty: 1, price: 0 });
+                };
+
+                const removeItem = (index) => {
+                    invoice.value.items.splice(index, 1);
+                };
+
+                const formatCurrency = (val) => {
+                    return 'LKR ' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                };
+
+                const printInvoice = () => {
+                    window.print();
+                };
+
+                const handleLogoUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            invoice.value.vendorLogoImage = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+
+                const removeLogo = () => {
+                    invoice.value.vendorLogoImage = '';
+                };
+
+                const shareWhatsApp = () => {
+                    const text = `*INVOICE: ${invoice.value.number}*%0A` +
+                        `*Client:* ${invoice.value.clientName}%0A` +
+                        `*Total:* ${formatCurrency(total.value)}%0A` +
+                        `---%0A` +
+                        `Thank you!`;
+                    window.open(`https://wa.me/?text=${text}`, '_blank');
+                };
+
+                onMounted(() => {
+                    lucide.createIcons();
+                });
+
+                return {
+                    invoice,
+                    subtotal,
+                    tax,
+                    total,
+                    addItem,
+                    removeItem,
+                    formatCurrency,
+                    printInvoice,
+                    shareWhatsApp,
+                    handleLogoUpload,
+                    removeLogo
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
